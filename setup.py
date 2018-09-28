@@ -25,8 +25,18 @@ setup(name='emc.auth',
       zip_safe=False,
       install_requires=[
           'setuptools',
+          'zope.interface',
+          'zope.publisher',
+          'zope.i18nmessageid',
+#           'five.globalrequest',
+          'Products.PluggableAuthService',
+          'Products.PlonePAS',
+          'Products.statusmessages',
           # -*- Extra requirements: -*-
       ],
+      extras_require={
+          'test': ['plone.app.testing',]
+      },      
       entry_points="""
       # -*- Entry points: -*-
 
