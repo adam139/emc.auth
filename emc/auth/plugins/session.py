@@ -194,6 +194,8 @@ class SessionPlugin(BasePlugin):
 #                 request.SESSION.set('__ac_password', password)
 # 
 #         if creds:
+## 用户证书主题
+#             creds['id_number'] = request.get('dnname', '')
 #             creds['remote_host'] = request.get('REMOTE_HOST', '')
 # 
 #             try:
