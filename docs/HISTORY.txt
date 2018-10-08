@@ -1,6 +1,12 @@
 Changelog
 =========
 
+dev1.2
+-------------------
+
+- 2018-10-08 add session authorize test
+
+
 1.0dev (unreleased)
 -------------------
 
