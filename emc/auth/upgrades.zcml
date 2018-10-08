@@ -1,0 +1,15 @@
+<configure
+    xmlns:zope="http://namespaces.zope.org/zope"
+    xmlns:browser="http://namespaces.zope.org/browser"
+    xmlns:genericsetup="http://namespaces.zope.org/genericsetup">
+
+  <genericsetup:upgradeStep
+      source="1000"
+      destination="1001"
+      title="Use new resource registry."
+      description=""
+      profile="emc.auth:default"
+      handler="emc.auth.upgrades.upgrade_1000_to_1001"
+  />
+
+</configure>
