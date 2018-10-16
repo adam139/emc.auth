@@ -25,10 +25,12 @@ def split_idNumber(tStrDN):
                 }
             }
         }
-    
+    example :tStrDN = "cn=test1 430203198512096013,dummychar,otherstring"
     """
     dnsplit = tStrDN.rstrip().split(",")
-    for i in len(dnsplit):
+
+    for i in range(len(dnsplit)):
+
         if dnsplit[i].lower().index("cn=") >= 0:
             cnsplit = dnsplit[i].split("=")
             dnName = cnsplit[1]
@@ -36,6 +38,7 @@ def split_idNumber(tStrDN):
                 dn = dnName.split(" ")
                 name = dn[0]
                 idNumber = dn[1]
+                break
             else:
                 name = dnName
                 idNumber = ""

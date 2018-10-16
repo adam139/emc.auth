@@ -1,5 +1,6 @@
 <configure
     xmlns="http://namespaces.zope.org/zope"
+    xmlns:genericsetup="http://namespaces.zope.org/genericsetup"    
     xmlns:five="http://namespaces.zope.org/five"
     xmlns:zcml="http://namespaces.zope.org/zcml">
 
@@ -19,5 +20,18 @@
       file="profiles.zcml"
       zcml:condition="installed Products.CMFPlone"
   />
-
+    <genericsetup:registerProfile
+        name="default"
+        title="EMC Session authentication"
+        directory="profiles/default"
+        description="Integrate with Jida Authorize GW"
+        provides="Products.GenericSetup.interfaces.EXTENSION"
+        />  
+    <genericsetup:importStep
+        name="emc-auth-various"
+        title="Additional EMC Session Authentication setup"
+        description="EMC session PAS plugin installer"
+        handler="emc.auth.setuphandlers.importVarious">
+        <depends name="rolemap"/>
+    </genericsetup:importStep>
 </configure>

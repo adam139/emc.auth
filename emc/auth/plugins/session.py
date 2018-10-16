@@ -18,6 +18,8 @@ from plone.session.plugins.session import SessionPlugin as BasePlugin
 from zope.component import getUtility
 from zope.component import queryUtility
 from zope.interface import implementer
+from emc.auth.utils import transfer_codec
+from emc.auth.utils import split_idNumber
 
 import binascii
 import time
@@ -65,7 +67,7 @@ class SessionPlugin(BasePlugin):
     meta_type = "Emc Session Plugin"
     security = ClassSecurityInfo()
 
-    cookie_name = "__ac"
+    cookie_name = "__emc_ac"
     cookie_lifetime = 0
     cookie_domain = ''
     mod_auth_tkt = False
@@ -145,6 +147,19 @@ class SessionPlugin(BasePlugin):
         manager = getUtility(IKeyManager)
         return manager.secret()
 
+    # first create a init cookie value
+    def _initCookie(self,userid,tokens=(),user_data=''):
+        #_setupSession(self, userid, response, tokens=(), user_data=''):
+        cookie = tktauth.createTicket(
+            secret=self._getSigningSecret(),
+            userid=userid,
+            tokens=tokens,
+            user_data=user_data,
+            mod_auth_tkt=self.mod_auth_tkt,
+        )
+        return cookie
+
+        
     # ISessionPlugin implementation
     def _setupSession(self, userid, response, tokens=(), user_data=''):
         cookie = tktauth.createTicket(
@@ -154,6 +169,7 @@ class SessionPlugin(BasePlugin):
             user_data=user_data,
             mod_auth_tkt=self.mod_auth_tkt,
         )
+
         self._setCookie(cookie, response)
 
     def _setCookie(self, cookie, response):
@@ -170,45 +186,48 @@ class SessionPlugin(BasePlugin):
             options['expires'] = cookie_expiration_date(self.cookie_lifetime)
         response.setCookie(self.cookie_name, cookie, **options)
 
+    # extract username and id number
+    def extractAuthGWInfo(self,request):
+        """ Exract jida Authorize gateway plug into head info"""
+        # 用户证书主题
+        dn = request.get('dnname', '')
+        dn = transfer_codec(dn)
+        userName,idNumber = split_idNumber(dn)
+        loginid = request.get('username', '')
+        loginid = transfer_codec(loginid) 
+#         creds['remote_host'] = request.get('REMOTE_HOST', '')
+        return loginid,userName,idNumber
+            
     # IExtractionPlugin implementation
     def extractCredentials(self, request):
         """ Extract basic auth credentials from 'request'. """
-#         creds = {}
-# 
-#         # Looking into the session first...
-#         name = request.SESSION.get('__ac_name', '')
-#         password = request.SESSION.get('__ac_password', '')
-# 
-#         if name:
-#             creds[ 'login' ] = name
-#             creds[ 'password' ] = password
-#         else:
-#             # Look into the request now
-#             login_pw = request._authUserPW()
-# 
-#             if login_pw is not None:
-#                 name, password = login_pw
+        
+        creds = {}
+        if self.cookie_name not in request:
+            # Looking into the session first...
+#             name = request.SESSION.get('__ac_loginid', '')
+#             password = request.SESSION.get('__ac_idnumber', '')
+#  
+#             if name:
 #                 creds[ 'login' ] = name
 #                 creds[ 'password' ] = password
-#                 request.SESSION.set('__ac_name', name)
-#                 request.SESSION.set('__ac_password', password)
-# 
-#         if creds:
-## 用户证书主题
-#             creds['id_number'] = request.get('dnname', '')
-#             creds['remote_host'] = request.get('REMOTE_HOST', '')
-# 
-#             try:
-#                 creds['remote_address'] = request.getClientAddr()
-#             except AttributeError:
-#                 creds['remote_address'] = request.get('REMOTE_ADDR', '')
-# 
-#         return creds        
-        creds = {}
-        import pdb
-        pdb.set_trace()
-        if self.cookie_name not in request:
-            return creds
+#             else:
+            # Look into the request now
+#                 login_pw = request._authUserPW()
+                login_pw = self.extractAuthGWInfo(request)
+ 
+                if login_pw is not None:
+                    id, name, idnumber = login_pw
+                    creds[ 'login' ] = id
+                    creds[ 'password' ] = idnumber
+                    self._setupSession(id,request.response)
+#                     self._initCookie(id,request)
+                    cookie = binascii.a2b_base64(request.response.getCookie(self.cookie_name)['value'])
+                    creds["cookie"] = cookie
+                    creds["source"] = "emc.session"
+#                     request.SESSION.set('__ac_loginid', id)
+#                     request.SESSION.set('__ac_idnumber', idnumber)
+                return creds
 
         try:
             creds["cookie"] = binascii.a2b_base64(
@@ -228,12 +247,14 @@ class SessionPlugin(BasePlugin):
         if not credentials.get("source", None) == "emc.session":
             return None
 
-        ticket = credentials["cookie"]
+        ticket = credentials["cookie"]       
         ticket_data = self._validateTicket(ticket)
         if ticket_data is None:
             return None
         (digest, userid, tokens, user_data, timestamp) = ticket_data
         pas = self._getPAS()
+
+        #user_id -> info_dict or None
         info = pas._verifyUser(pas.plugins, user_id=userid)
         if info is None:
             return None
@@ -255,6 +276,7 @@ class SessionPlugin(BasePlugin):
         else:
             ticket_data = None
             manager = queryUtility(IKeyManager)
+
             if manager is None:
                 return None
             for secret in manager[u"_system"]:

@@ -19,32 +19,38 @@ class MockResponse(object):
 
 class TestSessionPlugin(FunctionalPloneSessionTestCase):
 
-    userid = 'jbloggs'
+    userid = 'test1'
+    dn = u"cn=test1 430203198512096013,dummychar,otherstring".encode('iso-8859-1')
+    username = u"test1".encode('iso-8859-1')
 
     def testInterfaces(self):
-        session = self.folder.pas.session
+        session = self.folder.pas.emcsession
         self.assertEqual(ISessionPlugin.providedBy(session), True)
 
-    def makeRequest(self, cookie):
-        session = self.folder.pas.session
-        return TestRequest(**{session.cookie_name: cookie})
+    def makeRequest(self, cookie,dn,username):
+        session = self.folder.pas.emcsession
+        return TestRequest(**{session.cookie_name: cookie,"dnname":dn,"username":username})
+
+    def makeInitRequest(self, dn,username):
+        session = self.folder.pas.emcsession
+        return TestRequest(**{"dnname":dn,"username":username})
 
     def testOneLineCookiesOnly(self):
         longid = "x" * 256
         response = MockResponse()
-        session = self.folder.pas.session
+        session = self.folder.pas.emcsession
         session._setupSession(longid, response)
         self.assertEqual(len(response.cookie.split()), 1)
 
     def testCookieLifetimeNoExpiration(self):
         response = MockResponse()
-        session = self.folder.pas.session
+        session = self.folder.pas.emcsession
         session._setupSession(self.userid, response)
         self.assertEqual(response.cookie_expires, None)
 
     def testSecureCookies(self):
         response = MockResponse()
-        session = self.folder.pas.session
+        session = self.folder.pas.emcsession
 
         session._setupSession(self.userid, response)
         self.assertEqual(response.secure, False)
@@ -55,13 +61,13 @@ class TestSessionPlugin(FunctionalPloneSessionTestCase):
 
     def testCookieHTTPOnly(self):
         response = MockResponse()
-        session = self.folder.pas.session
+        session = self.folder.pas.emcsession
         session._setupSession(self.userid, response)
         self.assertEqual(response.cookie_http_only, True)
 
     def testCookieLifetimeWithExpirationSet(self):
         response = MockResponse()
-        session = self.folder.pas.session
+        session = self.folder.pas.emcsession
         session.cookie_lifetime = 100
         session._setupSession(self.userid, response)
         self.assertEqual(
@@ -70,29 +76,56 @@ class TestSessionPlugin(FunctionalPloneSessionTestCase):
         )
 
     def testExtraction(self):
-        session = self.folder.pas.session
+        session = self.folder.pas.emcsession
 
-        request = self.makeRequest("test string".encode("base64"))
+        request = self.makeRequest("test string".encode("base64"),self.dn,self.username)
         creds = session.extractCredentials(request)
-        import pdb
-        pdb.set_trace()
         self.assertEqual(creds["source"], "emc.session")
         self.assertEqual(creds["cookie"], "test string")
 
-        request = self.makeRequest("test string")
+        request = self.makeRequest("test string",self.dn,self.username)
         creds = session.extractCredentials(request)
         self.assertEqual(creds, {})
+        
+    def testInitExtraction(self):
+        session = self.folder.pas.emcsession
+
+        request = self.makeInitRequest(self.dn,self.username)
+        creds = session.extractCredentials(request)
+        self.assertEqual(creds["source"], "emc.session")
+        cookie = session._initCookie(self.userid)
+        self.assertEqual(creds["cookie"], cookie)
+
+        request = self.makeRequest("test string",self.dn,self.username)
+        creds = session.extractCredentials(request)
+        self.assertEqual(creds, {})        
+
+    def authenticateCredentials(self):
+        session = self.folder.pas.emcsession
+
+        request = self.makeRequest("test string".encode("base64"),self.dn,self.username)
+        creds = session.extractCredentials(request)
+        import pdb
+        pdb.set_trace()        
+        auth = session.authenticateCredentials(creds)
+        self.assertEqual(auth[0], "test1")
+        self.assertEqual(auth[1], "test1")
+
+        request = self.makeRequest("test string")
+        creds = session.extractCredentials(request)
+        auth = session.authenticateCredentials(creds)
+        self.assertEqual(auth, None)
 
     def testCredentialsUpdate(self):
-        session = self.folder.pas.session
-        request = self.makeRequest("test string")
+        session = self.folder.pas.emcsession
+        request = self.makeRequest("test string",self.dn,self.username)
         session.updateCredentials(request, request.response, "bla", "password")
         self.assertEqual(request.response.getCookie(session.cookie_name), None)
 
         session.updateCredentials(
             request,
             request.response,
-            "our_user",
+            "test1",
             "password"
         )
         self.assertNotEqual(
@@ -101,16 +134,16 @@ class TestSessionPlugin(FunctionalPloneSessionTestCase):
         )
 
     def testRefresh(self):
-        session = self.folder.pas.session
-        request = self.makeRequest("test string")
+        session = self.folder.pas.emcsession
+        request = self.makeRequest("test string",self.dn,self.username)
         session.updateCredentials(
             request,
             request.response,
-            "our_user",
+            "test1",
             "password"
         )
         cookie = request.response.getCookie(session.cookie_name)['value']
-        request2 = self.makeRequest(cookie)
+        request2 = self.makeRequest(cookie,self.dn,self.username)
         request2.form['type'] = 'gif'
         session.refresh(request2)
         self.assertNotEqual(
@@ -121,14 +154,14 @@ class TestSessionPlugin(FunctionalPloneSessionTestCase):
     def testUnicodeUserid(self):
         unicode_userid = six.text_type(self.userid)
         response = MockResponse()
-        session = self.folder.pas.session
+        session = self.folder.pas.emcsession
         # This step would fail.
         session._setupSession(unicode_userid, response)
 
     def testSpecialCharUserid(self):
         unicode_userid = u"ãbcdéfghijk"
         response = MockResponse()
-        session = self.folder.pas.session
+        session = self.folder.pas.emcsession
         # This step would fail.
         session._setupSession(unicode_userid, response)
 

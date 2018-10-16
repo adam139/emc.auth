@@ -21,8 +21,8 @@ class FakePAS(Folder):
 
     def _verifyUser(self, plugin, user_id=None, login=None):
         assert user_id is None
-        if login == 'our_user':
-            return dict(id=login, login=login, pluginid="session")
+        if login == 'test1':
+            return dict(id=login, login=login, pluginid="emcsession")
         return None
 
 
@@ -33,7 +33,7 @@ class PloneSessionTestCase(ZopeTestCase.ZopeTestCase):
         zcml.load_config('configure.zcml', emc.auth)
         zcml.load_config('configure.zcml', emc.auth.tests)
         self.folder._setObject("pas", FakePAS("pas"))
-        self.folder.pas._setObject("session", SessionPlugin("session"))
+        self.folder.pas._setObject("emcsession", SessionPlugin("emcsession"))
 
 
 class FunctionalPloneSessionTestCase(
