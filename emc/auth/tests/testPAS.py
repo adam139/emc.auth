@@ -19,9 +19,9 @@ class MockResponse(object):
 
 class TestSessionPlugin(FunctionalPloneSessionTestCase):
 
-    userid = 'test1'
-    dn = u"cn=test1 430203198512096013,dummychar,otherstring".encode('iso-8859-1')
-    username = u"test1".encode('iso-8859-1')
+    userid = '333010199106113321'
+    dn = u"CN=李四,T=333010199106113321,O=JIT,C=CN,dummychar,otherstring".encode('utf-8').decode('latin-1').encode('latin-1')
+    username = u"test1".encode('utf-8').decode('latin-1').encode('latin-1')
 
     def testInterfaces(self):
         session = self.folder.pas.emcsession
@@ -34,6 +34,12 @@ class TestSessionPlugin(FunctionalPloneSessionTestCase):
     def makeInitRequest(self, dn,username):
         session = self.folder.pas.emcsession
         return TestRequest(**{"dnname":dn,"username":username})
+
+    def makeTruecookieRequest(self,cookie, dn,username):
+        session = self.folder.pas.emcsession
+        cookie = session._initCookie(self.userid,user_data=cookie)
+
+        return TestRequest(**{session.cookie_name: cookie,"dnname":dn,"username":username})
 
     def testOneLineCookiesOnly(self):
         longid = "x" * 256
@@ -93,28 +99,33 @@ class TestSessionPlugin(FunctionalPloneSessionTestCase):
         request = self.makeInitRequest(self.dn,self.username)
         creds = session.extractCredentials(request)
         self.assertEqual(creds["source"], "emc.session")
-        cookie = session._initCookie(self.userid)
+        cookie = session._initCookieNobase64(self.userid)
         self.assertEqual(creds["cookie"], cookie)
 
         request = self.makeRequest("test string",self.dn,self.username)
         creds = session.extractCredentials(request)
         self.assertEqual(creds, {})        
 
-    def authenticateCredentials(self):
+    def testauthenticateCredentials(self):
         session = self.folder.pas.emcsession
-
-        request = self.makeRequest("test string".encode("base64"),self.dn,self.username)
+        request = self.makeInitRequest(self.dn,self.username)
+#         request = self.makeRequest("test string".encode("base64"),self.dn,self.username)
         creds = session.extractCredentials(request)
-        import pdb
-        pdb.set_trace()        
+#         import pdb
+#         pdb.set_trace()        
         auth = session.authenticateCredentials(creds)
-        self.assertEqual(auth[0], "test1")
-        self.assertEqual(auth[1], "test1")
-
-        request = self.makeRequest("test string")
+        self.assertEqual(auth[0], self.userid)
+        self.assertEqual(auth[1], self.userid)
+        request = self.makeTruecookieRequest("test string".encode("base64"),self.dn,self.username)
         creds = session.extractCredentials(request)
+
         auth = session.authenticateCredentials(creds)
-        self.assertEqual(auth, None)
+        self.assertNotEqual(auth, None)
+        request = self.makeTruecookieRequest("test string",self.dn,self.username)
+        creds = session.extractCredentials(request)
+      
+        auth = session.authenticateCredentials(creds)
+        self.assertNotEqual(auth, None)
 
     def testCredentialsUpdate(self):
         session = self.folder.pas.emcsession
@@ -125,7 +136,7 @@ class TestSessionPlugin(FunctionalPloneSessionTestCase):
         session.updateCredentials(
             request,
             request.response,
-            "test1",
+            self.userid,
             "password"
         )
         self.assertNotEqual(
@@ -139,7 +150,7 @@ class TestSessionPlugin(FunctionalPloneSessionTestCase):
         session.updateCredentials(
             request,
             request.response,
-            "test1",
+            self.userid,
             "password"
         )
         cookie = request.response.getCookie(session.cookie_name)['value']

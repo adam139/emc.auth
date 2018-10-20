@@ -5,7 +5,11 @@ def transfer_codec(str):
     将 ISO8859-1 编码的字节流解码后,再用utf-8编码
     """
 #     if isinstance(str,basestring)
-    return str.decode("iso-8859-1").encode("utf-8")
+    try:
+        out = str.decode("latin-1")
+    except:
+        out = str
+    return out
     
     
 def split_idNumber(tStrDN):
@@ -26,24 +30,28 @@ def split_idNumber(tStrDN):
             }
         }
     example :tStrDN = "cn=test1 430203198512096013,dummychar,otherstring"
+    dnname:CN=李四,T=333010199106113321,O=JIT,C=CN
     """
+    
     dnsplit = tStrDN.rstrip().split(",")
+    if len(dnsplit) == 0:
+        name = ""
+        idNumber = "" 
+        return name,idNumber
+    idNumber = dnsplit[1].rstrip()
+    if idNumber.lower().index("t=") >= 0:
+        idNumber = idNumber.split("=")[1]
+    else:
+        idNumber = ""
 
     for i in range(len(dnsplit)):
 
         if dnsplit[i].lower().index("cn=") >= 0:
             cnsplit = dnsplit[i].split("=")
-            dnName = cnsplit[1]
-            if (dnName.lstrip().index(" ")>=0):
-                dn = dnName.split(" ")
-                name = dn[0]
-                idNumber = dn[1]
-                break
-            else:
-                name = dnName
-                idNumber = ""
+            name = cnsplit[1].lstrip()
+            break
+
         else:
             name = "dummyuser"
-            idNumber = ""
     return name,idNumber
                 

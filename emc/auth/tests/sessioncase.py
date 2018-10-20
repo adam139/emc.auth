@@ -20,11 +20,18 @@ class FakePAS(Folder):
         self.credentials = (userid, password)
 
     def _verifyUser(self, plugin, user_id=None, login=None):
-        assert user_id is None
-        if login == 'test1':
-            return dict(id=login, login=login, pluginid="emcsession")
+#         assert user_id is None
+        id = user_id or login
+        if id == '333010199106113321':
+            return dict(id=id, login=id, pluginid="emcsession")
         return None
 
+    def _verifyUserByidNumber(self, plugin, user_id=None, login=None, idnumber=None):
+        assert user_id is None
+        if idnumber == '333010199106113321':
+            return dict(id=idnumber, login=idnumber, pluginid="emcsession")
+        return None
+    
 
 class PloneSessionTestCase(ZopeTestCase.ZopeTestCase):
 

@@ -68,6 +68,7 @@ class SessionPlugin(BasePlugin):
     security = ClassSecurityInfo()
 
     cookie_name = "__emc_ac"
+    jid_auth_header = "dnname"
     cookie_lifetime = 0
     cookie_domain = ''
     mod_auth_tkt = False
@@ -147,6 +148,18 @@ class SessionPlugin(BasePlugin):
         manager = getUtility(IKeyManager)
         return manager.secret()
 
+    def _initCookieNobase64(self,userid,tokens=(),user_data=''):
+        #_setupSession(self, userid, response, tokens=(), user_data=''):
+        cookie = tktauth.createTicket(
+            secret=self._getSigningSecret(),
+            userid=userid,
+            tokens=tokens,
+            user_data=user_data,
+            mod_auth_tkt=self.mod_auth_tkt,
+        )
+#         cookie = binascii.b2a_base64(cookie).rstrip()
+        return cookie
+
     # first create a init cookie value
     def _initCookie(self,userid,tokens=(),user_data=''):
         #_setupSession(self, userid, response, tokens=(), user_data=''):
@@ -157,6 +170,7 @@ class SessionPlugin(BasePlugin):
             user_data=user_data,
             mod_auth_tkt=self.mod_auth_tkt,
         )
+        cookie = binascii.b2a_base64(cookie).rstrip()
         return cookie
 
         
@@ -190,11 +204,11 @@ class SessionPlugin(BasePlugin):
     def extractAuthGWInfo(self,request):
         """ Exract jida Authorize gateway plug into head info"""
         # 用户证书主题
-        dn = request.get('dnname', '')
+        dn = request.get(self.jid_auth_header, '')
         dn = transfer_codec(dn)
         userName,idNumber = split_idNumber(dn)
-        loginid = request.get('username', '')
-        loginid = transfer_codec(loginid) 
+        loginid = idNumber
+#         loginid = transfer_codec(loginid) 
 #         creds['remote_host'] = request.get('REMOTE_HOST', '')
         return loginid,userName,idNumber
             
@@ -203,17 +217,9 @@ class SessionPlugin(BasePlugin):
         """ Extract basic auth credentials from 'request'. """
         
         creds = {}
-        if self.cookie_name not in request:
+        if self.cookie_name not in request and self.jid_auth_header in request:
             # Looking into the session first...
-#             name = request.SESSION.get('__ac_loginid', '')
-#             password = request.SESSION.get('__ac_idnumber', '')
-#  
-#             if name:
-#                 creds[ 'login' ] = name
-#                 creds[ 'password' ] = password
-#             else:
-            # Look into the request now
-#                 login_pw = request._authUserPW()
+                
                 login_pw = self.extractAuthGWInfo(request)
  
                 if login_pw is not None:
@@ -222,6 +228,7 @@ class SessionPlugin(BasePlugin):
                     creds[ 'password' ] = idnumber
                     self._setupSession(id,request.response)
 #                     self._initCookie(id,request)
+#fetched out cookie is turned into no binary data
                     cookie = binascii.a2b_base64(request.response.getCookie(self.cookie_name)['value'])
                     creds["cookie"] = cookie
                     creds["source"] = "emc.session"
@@ -230,6 +237,7 @@ class SessionPlugin(BasePlugin):
                 return creds
 
         try:
+
             creds["cookie"] = binascii.a2b_base64(
                 request.get(self.cookie_name)
             )
@@ -246,9 +254,9 @@ class SessionPlugin(BasePlugin):
     def authenticateCredentials(self, credentials):
         if not credentials.get("source", None) == "emc.session":
             return None
-
         ticket = credentials["cookie"]       
         ticket_data = self._validateTicket(ticket)
+
         if ticket_data is None:
             return None
         (digest, userid, tokens, user_data, timestamp) = ticket_data
