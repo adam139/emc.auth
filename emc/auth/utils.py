@@ -35,23 +35,23 @@ def split_idNumber(tStrDN):
     
     dnsplit = tStrDN.rstrip().split(",")
     if len(dnsplit) == 0:
-        name = ""
+#         name = ""
         idNumber = "" 
-        return name,idNumber
+        return idNumber,idNumber
     idNumber = dnsplit[1].rstrip()
     if idNumber.lower().index("t=") >= 0:
         idNumber = idNumber.split("=")[1]
     else:
         idNumber = ""
 
-    for i in range(len(dnsplit)):
-
-        if dnsplit[i].lower().index("cn=") >= 0:
-            cnsplit = dnsplit[i].split("=")
-            name = cnsplit[1].lstrip()
-            break
-
-        else:
-            name = "dummyuser"
-    return name,idNumber
+#     for i in range(len(dnsplit)):
+# 
+#         if dnsplit[i].lower().index("cn=") >= 0:
+#             cnsplit = dnsplit[i].split("=")
+#             name = cnsplit[1].lstrip()
+#             break
+# 
+#         else:
+#             name = "dummyuser"
+    return idNumber,idNumber
                 
