@@ -29,17 +29,17 @@ class TestSessionPlugin(FunctionalPloneSessionTestCase):
 
     def makeRequest(self, cookie,dn,username):
         session = self.folder.pas.emcsession
-        return TestRequest(**{session.cookie_name: cookie,"dnname":dn,"username":username})
+        return TestRequest(**{session.cookie_name: cookie,"HTTP_DNNAME":dn,"username":username})
 
     def makeInitRequest(self, dn,username):
         session = self.folder.pas.emcsession
-        return TestRequest(**{"dnname":dn,"username":username})
+        return TestRequest(**{"HTTP_DNNAME":dn,"username":username})
 
     def makeTruecookieRequest(self,cookie, dn,username):
         session = self.folder.pas.emcsession
         cookie = session._initCookie(self.userid,user_data=cookie)
 
-        return TestRequest(**{session.cookie_name: cookie,"dnname":dn,"username":username})
+        return TestRequest(**{session.cookie_name: cookie,"HTTP_DNNAME":dn,"username":username})
 
     def testOneLineCookiesOnly(self):
         longid = "x" * 256

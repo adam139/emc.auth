@@ -68,7 +68,7 @@ class SessionPlugin(BasePlugin):
     security = ClassSecurityInfo()
 
     cookie_name = "__emc_ac"
-    jid_auth_header = "dnname"
+    jid_auth_header = "HTTP_DNNAME"
     cookie_lifetime = 0
     cookie_domain = ''
     mod_auth_tkt = False
@@ -201,10 +201,10 @@ class SessionPlugin(BasePlugin):
         response.setCookie(self.cookie_name, cookie, **options)
 
     # extract username and id number
-    def extractAuthGWInfo(self,request):
+    def extractAuthGWInfo(self,dn):
         """ Exract jida Authorize gateway plug into head info"""
-        # 用户证书主题
-        dn = request.get(self.jid_auth_header, '')
+        
+#         dn = request.get(self.jid_auth_header, '')
         dn = transfer_codec(dn)
         userName,idNumber = split_idNumber(dn)
         loginid = idNumber
@@ -218,10 +218,10 @@ class SessionPlugin(BasePlugin):
         
         creds = {}
         if self.cookie_name not in request and self.jid_auth_header in request:
-            # Looking into the session first...
-                
-                login_pw = self.extractAuthGWInfo(request)
- 
+                dn = request.get(self.jid_auth_header, '')
+                if not bool(dn):return creds
+            # Looking into the session first...                
+                login_pw = self.extractAuthGWInfo(dn) 
                 if login_pw is not None:
                     id, name, idnumber = login_pw
                     creds[ 'login' ] = id
@@ -236,17 +236,17 @@ class SessionPlugin(BasePlugin):
 #                     request.SESSION.set('__ac_idnumber', idnumber)
                 return creds
 
-        try:
-
-            creds["cookie"] = binascii.a2b_base64(
+        if self.cookie_name in request:
+            try:
+                creds["cookie"] = binascii.a2b_base64(
                 request.get(self.cookie_name)
             )
-        except binascii.Error:
+            except binascii.Error:
             # If we have a cookie which is not properly base64 encoded it
             # can not be ours.
-            return creds
+                return creds
 
-        creds["source"] = "emc.session"  # XXX should this be the id?
+            creds["source"] = "emc.session"  # XXX should this be the id?
 
         return creds
 
