@@ -72,8 +72,8 @@ class SessionPlugin(BasePlugin):
     cookie_lifetime = 0
     cookie_domain = ''
     mod_auth_tkt = False
-    timeout = 2 * 60 * 60  # 2h - same as default in mod_auth_tkt
-    refresh_interval = 1 * 60 * 60  # -1 to disable
+    timeout = 0.2 * 60 * 60  # 2h - same as default in mod_auth_tkt
+    refresh_interval = 0.1 * 60 * 60  # -1 to disable
     external_ticket_name = 'ticket'
     secure = False
     _shared_secret = None
@@ -103,6 +103,12 @@ class SessionPlugin(BasePlugin):
         },
         {
             "id": "cookie_name",
+            "label": "Cookie name",
+            "type": "string",
+            "mode": "w",
+        },                   
+        {
+            "id": "jid_auth_header",
             "label": "Cookie name",
             "type": "string",
             "mode": "w",
@@ -186,6 +192,22 @@ class SessionPlugin(BasePlugin):
 
         self._setCookie(cookie, response)
 
+    def _setupSession2(self, userid, response, tokens=(), user_data=''):
+        cookie = tktauth.createTicket(
+            secret=self._getSigningSecret(),
+            userid=userid,
+            tokens=tokens,
+            user_data=user_data,
+            mod_auth_tkt=self.mod_auth_tkt,
+        )
+
+        return self._setCookie2(cookie, response)
+
+    def _setCookie2(self, cookie, response):
+        cookie = binascii.b2a_base64(cookie).rstrip()
+
+        return cookie
+
     def _setCookie(self, cookie, response):
         cookie = binascii.b2a_base64(cookie).rstrip()
         # disable secure cookie in development mode, to ease local testing
@@ -198,6 +220,8 @@ class SessionPlugin(BasePlugin):
             options['domain'] = self.cookie_domain
         if self.cookie_lifetime:
             options['expires'] = cookie_expiration_date(self.cookie_lifetime)
+#         import pdb
+#         pdb.set_trace()
         response.setCookie(self.cookie_name, cookie, **options)
 
     # extract username and id number
@@ -217,7 +241,7 @@ class SessionPlugin(BasePlugin):
         """ Extract basic auth credentials from 'request'. """
         
         creds = {}
-        if self.cookie_name not in request and self.jid_auth_header in request:
+        if self.cookie_name not in request.keys() and self.jid_auth_header in request.keys():
                 dn = request.get(self.jid_auth_header, '')
                 if not bool(dn):return creds
             # Looking into the session first...                
@@ -226,17 +250,20 @@ class SessionPlugin(BasePlugin):
                     id, name, idnumber = login_pw
                     creds[ 'login' ] = id
                     creds[ 'password' ] = idnumber
-                    self._setupSession(id,request.response)
-#                     self._initCookie(id,request)
+                    creds['init_login'] = True
+                    creds['request'] = request                    
+
+
 #fetched out cookie is turned into no binary data
-                    cookie = binascii.a2b_base64(request.response.getCookie(self.cookie_name)['value'])
-                    creds["cookie"] = cookie
+#                     value = request.response.getCookie(self.cookie_name)['value']
+#                     cookie = binascii.a2b_base64(request.response.getCookie(self.cookie_name)['value'])
+                    creds["cookie"] = ""
                     creds["source"] = "emc.session"
 #                     request.SESSION.set('__ac_loginid', id)
 #                     request.SESSION.set('__ac_idnumber', idnumber)
                 return creds
 
-        if self.cookie_name in request:
+        if self.cookie_name in request.keys():
             try:
                 creds["cookie"] = binascii.a2b_base64(
                 request.get(self.cookie_name)
@@ -254,12 +281,18 @@ class SessionPlugin(BasePlugin):
     def authenticateCredentials(self, credentials):
         if not credentials.get("source", None) == "emc.session":
             return None
-        ticket = credentials["cookie"]       
-        ticket_data = self._validateTicket(ticket)
+        ticket = credentials["cookie"]
+        if ticket != "":       
+            ticket_data = self._validateTicket(ticket)
 
-        if ticket_data is None:
-            return None
-        (digest, userid, tokens, user_data, timestamp) = ticket_data
+            if ticket_data is None:
+                return None
+            (digest, userid, tokens, user_data, timestamp) = ticket_data
+        elif credentials["init_login"]:
+            userid = credentials['login']
+            request = credentials['request']
+            self._setupSession(userid, request.response)
+            
         pas = self._getPAS()
 
         #user_id -> info_dict or None
