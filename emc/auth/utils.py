@@ -44,14 +44,5 @@ def split_idNumber(tStrDN):
     else:
         idNumber = ""
 
-#     for i in range(len(dnsplit)):
-# 
-#         if dnsplit[i].lower().index("cn=") >= 0:
-#             cnsplit = dnsplit[i].split("=")
-#             name = cnsplit[1].lstrip()
-#             break
-# 
-#         else:
-#             name = "dummyuser"
     return idNumber,idNumber
                 
