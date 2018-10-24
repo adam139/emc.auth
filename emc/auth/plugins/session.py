@@ -241,39 +241,43 @@ class SessionPlugin(BasePlugin):
         """ Extract basic auth credentials from 'request'. """
         
         creds = {}
-        if self.cookie_name not in request.keys() and self.jid_auth_header in request.keys():
+        if self.jid_auth_header in request.keys():
                 dn = request.get(self.jid_auth_header, '')
                 if not bool(dn):return creds
-            # Looking into the session first...                
+            # Looking into the cookie first...
+                if self.cookie_name in request.keys():
+                    try:
+                        creds["cookie"] = binascii.a2b_base64(
+                            request.get(self.cookie_name)
+                            )
+                    except binascii.Error:
+            # If we have a cookie which is not properly base64 encoded it
+            # can not be ours.
+                        return creds
+                    else:
+                        ticket = creds["cookie"]                               
+                        ticket_data = self._validateTicket(ticket)
+                        if ticket_data is not None:
+                            (digest, userid, tokens, user_data, timestamp) = ticket_data
+                            creds["login"] = userid
+                            creds[ 'password' ] = userid
+                            creds['init_login'] = False
+                            creds["source"] = "emc.session" 
+                            return creds                                                                          
+                                
                 login_pw = self.extractAuthGWInfo(dn) 
                 if login_pw is not None:
                     id, name, idnumber = login_pw
                     creds[ 'login' ] = id
                     creds[ 'password' ] = idnumber
-                    creds['init_login'] = True
-                    creds['request'] = request                    
-
-
+                    creds['init_login'] = True                    
 #fetched out cookie is turned into no binary data
 #                     value = request.response.getCookie(self.cookie_name)['value']
 #                     cookie = binascii.a2b_base64(request.response.getCookie(self.cookie_name)['value'])
                     creds["cookie"] = ""
                     creds["source"] = "emc.session"
-#                     request.SESSION.set('__ac_loginid', id)
-#                     request.SESSION.set('__ac_idnumber', idnumber)
-                return creds
 
-        if self.cookie_name in request.keys():
-            try:
-                creds["cookie"] = binascii.a2b_base64(
-                request.get(self.cookie_name)
-            )
-            except binascii.Error:
-            # If we have a cookie which is not properly base64 encoded it
-            # can not be ours.
                 return creds
-
-            creds["source"] = "emc.session"  # XXX should this be the id?
 
         return creds
 
@@ -281,26 +285,20 @@ class SessionPlugin(BasePlugin):
     def authenticateCredentials(self, credentials):
         if not credentials.get("source", None) == "emc.session":
             return None
-        ticket = credentials["cookie"]
-        if ticket != "":       
-            ticket_data = self._validateTicket(ticket)
-
-            if ticket_data is None:
-                return None
-            (digest, userid, tokens, user_data, timestamp) = ticket_data
-        elif credentials["init_login"]:
+        
+        if not credentials["init_login"]:       
             userid = credentials['login']
-            request = credentials['request']
-            self._setupSession(userid, request.response)
+            # XXX Should refresh the ticket if after timeout refresh.
+            return (userid,userid)
+        else:
+            userid = credentials['login']
             
         pas = self._getPAS()
-
         #user_id -> info_dict or None
         info = pas._verifyUser(pas.plugins, user_id=userid)
         if info is None:
             return None
-
-        # XXX Should refresh the ticket if after timeout refresh.
+        
         return (info['id'], info['login'])
 
     def _validateTicket(self, ticket, now=None):

@@ -86,8 +86,9 @@ class TestSessionPlugin(FunctionalPloneSessionTestCase):
 
         request = self.makeRequest("test string".encode("base64"),self.dn,self.username)
         creds = session.extractCredentials(request)
+
         self.assertEqual(creds["source"], "emc.session")
-        self.assertEqual(creds["cookie"], "test string")
+        self.assertEqual(creds["cookie"], "")
 
         request = self.makeRequest("test string",self.dn,self.username)
         creds = session.extractCredentials(request)
@@ -99,7 +100,6 @@ class TestSessionPlugin(FunctionalPloneSessionTestCase):
         creds = session.extractCredentials(request)
         self.assertEqual(creds["source"], "emc.session")
         self.assertEqual(creds['init_login'], True)
-        self.assertEqual(creds["request"], request)
 #         cookie = session._initCookieNobase64(self.userid)
         self.assertEqual(creds["cookie"], "")
 #         self.assertEqual(creds["cookie"], cookie)
@@ -110,9 +110,7 @@ class TestSessionPlugin(FunctionalPloneSessionTestCase):
         request = self.makeInitRequest(self.dn,self.username)
 #         request = self.makeRequest("test string".encode("base64"),self.dn,self.username)
         creds = session.extractCredentials(request)
-        
-        import pdb
-        pdb.set_trace()        
+       
         auth = session.authenticateCredentials(creds)
         self.assertEqual(auth[0], self.userid)
         self.assertEqual(auth[1], self.userid)
