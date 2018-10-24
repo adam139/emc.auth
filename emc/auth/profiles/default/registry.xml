@@ -12,7 +12,7 @@
          The way to trigger the session refresh should be refactored at some point.
     -->
     <value key="enabled">True</value>
-    <value key="csscompilation">acl_users/session/refresh?session_refresh=true&amp;type=css&amp;minutes=5</value>
+    <value key="csscompilation">acl_users/emc-session-plugin/refresh?session_refresh=true&amp;type=css&amp;minutes=5</value>
     <value key="last_compilation">2018-03-27 00:00:00</value>
     <value key="compile">False</value>
     <value key="expression">python: member is not None</value>
