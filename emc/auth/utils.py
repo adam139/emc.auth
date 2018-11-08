@@ -34,15 +34,15 @@ def split_idNumber(tStrDN):
     """
     
     dnsplit = tStrDN.rstrip().split(",")
-    if len(dnsplit) == 0:
-#         name = ""
+    if len(dnsplit) == 0:#         name = ""
         idNumber = "" 
         return idNumber,idNumber
-    idNumber = dnsplit[1].rstrip()
-    if idNumber.lower().index("t=") >= 0:
+
+    dnsplit = filter(lambda x:x.lower().find("t=") >= 0,dnsplit)
+    if len(dnsplit) > 0:
+        idNumber = dnsplit[0].rstrip()    
         idNumber = idNumber.split("=")[1]
     else:
         idNumber = ""
-
     return idNumber,idNumber
                 
