@@ -226,7 +226,7 @@ class SessionPlugin(BasePlugin):
 
     # extract username and id number
     def extractAuthGWInfo(self,dn):
-        """ Exract jida Authorize gateway plug into head info"""
+        """ Exract info that jida Authorize gateway plugined into header"""
         
 #         dn = request.get(self.jid_auth_header, '')
         dn = transfer_codec(dn)
@@ -276,8 +276,7 @@ class SessionPlugin(BasePlugin):
 #                     cookie = binascii.a2b_base64(request.response.getCookie(self.cookie_name)['value'])
                     creds["cookie"] = ""
                     creds["source"] = "emc.session"
-
-                return creds
+                    return creds
 
         return creds
 
