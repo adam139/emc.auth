@@ -431,7 +431,7 @@ class SessionPlugin(BasePlugin):
         ticket_data = self._validateTicket(ticket, now)
         if ticket_data is None:
             #if is timeout,fire a logout event and call resetCredentials
-            logging.info("timout logout")
+            logging.info("timeout logout")
             logout(request)
             self.resetCredentials(request, request['RESPONSE'])            
             return None
