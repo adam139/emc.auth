@@ -1,5 +1,68 @@
 # -*- coding: utf-8 -*-
+from AccessControl.SecurityManagement import getSecurityManager
+from zope import event
+import datetime
+from emc.policy.events import AddlogoutEvent,NormalUserlogoutEvent
+from emc.policy.events import AddloginEvent,NormalUserloginEvent
+from emc.policy import get_ip,fmt,list2str,getfullname_orid
 
+def login(REQUEST=None):
+        """ Handle a login for the current user.
+
+        This method takes care of all the standard work that needs to be
+        done when a user logs in:
+        - sending a logged-in event
+        """
+        user=getSecurityManager().getUser()
+        if user is None:
+            return
+
+        loginEvent = NormalUserloginEvent(userid = getfullname_orid(user),
+                                     datetime = datetime.datetime.now().strftime(fmt),
+                                     ip = get_ip(),
+                                     type = 0,
+                                     description = "",
+                                     result = 1)
+        if loginEvent.available():
+            if loginEvent.is_normal_user():
+                event.notify(loginEvent)
+            else:
+                loginEvent = AddloginEvent(adminid = getfullname_orid(user),
+                                     userid = " ",
+                                     datetime = datetime.datetime.now().strftime(fmt),
+                                     ip = get_ip(),
+                                     type = 0,
+                                     description = "",
+                                     result = 1)                
+                event.notify(loginEvent)
+
+
+def logout(REQUEST):
+    """Publicly accessible method to log out a user
+    """
+    user = getSecurityManager().getUser()
+
+    logoutEvent = NormalUserlogoutEvent(userid = getfullname_orid(user),
+                                     datetime = datetime.datetime.now().strftime(fmt),
+                                     ip = get_ip(),
+                                     type = 0,
+                                     description = "",
+                                     result = 1)
+
+    if logoutEvent.available():
+        if logoutEvent.is_normal_user():
+            event.notify(logoutEvent)
+        else:
+            logoutEvent = AddlogoutEvent(adminid = getfullname_orid(user),
+                                     userid = " ",
+                                     datetime = datetime.datetime.now().strftime(fmt),
+                                     ip = get_ip(),
+                                     type = 0,
+                                     description = "",
+                                     result = 1)
+            event.notify(logoutEvent)            
+
+        
 def transfer_codec(str):
     """
     将 ISO8859-1 编码的字节流解码后,再用utf-8编码

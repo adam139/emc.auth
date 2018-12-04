@@ -20,9 +20,11 @@ from zope.component import queryUtility
 from zope.interface import implementer
 from emc.auth.utils import transfer_codec
 from emc.auth.utils import split_idNumber
-
+from emc.auth.utils import login
+from emc.auth.utils import logout
 import binascii
 import time
+import logging
 
 EMPTY_GIF = (
     'GIF89a\x01\x00\x01\x00\xf0\x01\x00\xff\xff\xff'
@@ -275,6 +277,7 @@ class SessionPlugin(BasePlugin):
 #                     value = request.response.getCookie(self.cookie_name)['value']
 #                     cookie = binascii.a2b_base64(request.response.getCookie(self.cookie_name)['value'])
                     creds["cookie"] = ""
+                    creds["request"] = request
                     creds["source"] = "emc.session"
                     return creds
 
@@ -297,7 +300,8 @@ class SessionPlugin(BasePlugin):
         info = pas._verifyUser(pas.plugins, user_id=userid)
         if info is None:
             return None
-        
+        # fire login event
+        login(credentials['request'])
         return (info['id'], info['login'])
 
     def _validateTicket(self, ticket, now=None):
@@ -426,6 +430,10 @@ class SessionPlugin(BasePlugin):
             now = time.time()
         ticket_data = self._validateTicket(ticket, now)
         if ticket_data is None:
+            #if is timeout,fire a logout event and call resetCredentials
+            logging.info("timout logout")
+            logout(request)
+            self.resetCredentials(request, request['RESPONSE'])            
             return None
         (digest, userid, tokens, user_data, timestamp) = ticket_data
         self._setupSession(userid, request.response, tokens, user_data)
@@ -448,6 +456,10 @@ class SessionPlugin(BasePlugin):
     def refresh(self, REQUEST):
         """Refresh the cookie"""
         setHeader = REQUEST.response.setHeader
+        logging.info("start refresh")
+#         import pdb
+#         pdb.set_trace()
+
         # Disable HTTP 1.0 Caching
         setHeader('Expires', formatdate(0, usegmt=True))
         if self.refresh_interval < 0:
