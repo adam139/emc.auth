@@ -18,6 +18,7 @@ from plone.session.plugins.session import SessionPlugin as BasePlugin
 from zope.component import getUtility
 from zope.component import queryUtility
 from zope.interface import implementer
+from emc.policy import get_ip
 from emc.auth.utils import transfer_codec
 from emc.auth.utils import split_idNumber
 from emc.auth.utils import login
@@ -243,9 +244,14 @@ class SessionPlugin(BasePlugin):
         """ Extract basic auth credentials from 'request'. """
         
         creds = {}
+#         import pdb
+#         pdb.set_trace()
         if self.jid_auth_header in request.keys():
                 dn = request.get(self.jid_auth_header, '')
                 if not bool(dn):return creds
+                # fetch remote ip
+                ip = get_ip(request)
+                creds['clientip'] = ip
             # Looking into the cookie first...
                 if self.cookie_name in request.keys():
                     try:
@@ -301,7 +307,10 @@ class SessionPlugin(BasePlugin):
         if info is None:
             return None
         # fire login event
-        login(credentials['request'])
+
+        ip = credentials['clientip']
+        login(pas,userid,ip)
+        
         return (info['id'], info['login'])
 
     def _validateTicket(self, ticket, now=None):

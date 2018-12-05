@@ -6,20 +6,21 @@ from emc.policy.events import AddlogoutEvent,NormalUserlogoutEvent
 from emc.policy.events import AddloginEvent,NormalUserloginEvent
 from emc.policy import get_ip,fmt,list2str,getfullname_orid
 
-def login(REQUEST=None):
-        """ Handle a login for the current user.
+def login(pas,userid,ip):
+        """ Handle a login for emc.auth.
 
         This method takes care of all the standard work that needs to be
         done when a user logs in:
         - sending a logged-in event
         """
-        user=getSecurityManager().getUser()
+        user=pas.getUserById(userid)
+
         if user is None:
             return
 
         loginEvent = NormalUserloginEvent(userid = getfullname_orid(user),
                                      datetime = datetime.datetime.now().strftime(fmt),
-                                     ip = get_ip(),
+                                     ip = ip,
                                      type = 0,
                                      description = "",
                                      result = 1)
