@@ -283,7 +283,7 @@ class SessionPlugin(BasePlugin):
 #                     value = request.response.getCookie(self.cookie_name)['value']
 #                     cookie = binascii.a2b_base64(request.response.getCookie(self.cookie_name)['value'])
                     creds["cookie"] = ""
-                    creds["request"] = request
+                    creds["url"] = request['URL']
                     creds["source"] = "emc.session"
                     return creds
 
@@ -307,9 +307,8 @@ class SessionPlugin(BasePlugin):
         if info is None:
             return None
         # fire login event
-
-        ip = credentials['clientip']
-        login(pas,userid,ip)
+        if credentials['url'].endswith('index.html'):
+            login(pas,userid,credentials['clientip'])
         
         return (info['id'], info['login'])
 
