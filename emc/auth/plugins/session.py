@@ -223,8 +223,7 @@ class SessionPlugin(BasePlugin):
             options['domain'] = self.cookie_domain
         if self.cookie_lifetime:
             options['expires'] = cookie_expiration_date(self.cookie_lifetime)
-#         import pdb
-#         pdb.set_trace()
+
         response.setCookie(self.cookie_name, cookie, **options)
 
     # extract username and id number
@@ -244,14 +243,11 @@ class SessionPlugin(BasePlugin):
         """ Extract basic auth credentials from 'request'. """
         
         creds = {}
-#         import pdb
-#         pdb.set_trace()
         if self.jid_auth_header in request.keys():
                 dn = request.get(self.jid_auth_header, '')
                 if not bool(dn):return creds
                 # fetch remote ip
-                ip = get_ip(request)
-                creds['clientip'] = ip
+                creds['clientip'] = get_ip(request)
             # Looking into the cookie first...
                 if self.cookie_name in request.keys():
                     try:
@@ -277,12 +273,9 @@ class SessionPlugin(BasePlugin):
                 if login_pw is not None:
                     id, name, idnumber = login_pw
                     creds[ 'login' ] = id
-                    creds[ 'password' ] = idnumber
-                    creds['init_login'] = True                    
-#fetched out cookie is turned into no binary data
-#                     value = request.response.getCookie(self.cookie_name)['value']
-#                     cookie = binascii.a2b_base64(request.response.getCookie(self.cookie_name)['value'])
+                    creds[ 'password' ] = idnumber    
                     creds["cookie"] = ""
+                    creds['init_login'] = True
                     creds["url"] = request['URL']
                     creds["source"] = "emc.session"
                     return creds
@@ -291,23 +284,21 @@ class SessionPlugin(BasePlugin):
 
     # IAuthenticationPlugin implementation
     def authenticateCredentials(self, credentials):
+        from plone import api
         if not credentials.get("source", None) == "emc.session":
             return None
-        
-        if not credentials["init_login"]:       
-            userid = credentials['login']
+        userid = credentials['login']
+        if not credentials["init_login"]:                  
             # XXX Should refresh the ticket if after timeout refresh.
-            return (userid,userid)
-        else:
-            userid = credentials['login']
-            
+            return (userid,userid)            
         pas = self._getPAS()
         #user_id -> info_dict or None
         info = pas._verifyUser(pas.plugins, user_id=userid)
         if info is None:
             return None
-        # fire login event
-        if credentials['url'].endswith('index.html'):
+        url = "%s/index.html" % api.portal.get().absolute_url()       
+        if credentials['url'] == url:
+            # fire login event
             login(pas,userid,credentials['clientip'])
         
         return (info['id'], info['login'])
@@ -464,10 +455,6 @@ class SessionPlugin(BasePlugin):
     def refresh(self, REQUEST):
         """Refresh the cookie"""
         setHeader = REQUEST.response.setHeader
-        logging.info("start refresh")
-#         import pdb
-#         pdb.set_trace()
-
         # Disable HTTP 1.0 Caching
         setHeader('Expires', formatdate(0, usegmt=True))
         if self.refresh_interval < 0:
