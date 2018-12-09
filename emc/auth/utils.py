@@ -14,10 +14,8 @@ def login(pas,userid,ip):
         - sending a logged-in event
         """
         user=pas.getUserById(userid)
-
         if user is None:
             return
-
         loginEvent = NormalUserloginEvent(userid = getfullname_orid(user),
                                      datetime = datetime.datetime.now().strftime(fmt),
                                      ip = ip,
