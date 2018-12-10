@@ -27,5 +27,9 @@ class TestRequest(unittest.TestCase):
         headers = dict(DNNAME ='CN=李四,T=333010199106113321,O=JIT,C=CN',
                   CLIENTIP = '123.123.123.123'
                   )
+        cookies = dict(__ac='working')
         url = 'http://127.0.0.1:8080/Plone8/acl_users/emc-session-plugin/refresh?session_refresh=true&amp;type=css&amp;minutes=5'
-        rt = requests.get(url,headers=headers)
+        rt = requests.get(url,headers=headers,cookies=cookies)
+        import pdb
+        pdb.set_trace()
+        print rt

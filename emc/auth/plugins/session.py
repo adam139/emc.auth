@@ -23,7 +23,7 @@ from emc.policy import get_ip
 from emc.auth.utils import transfer_codec
 from emc.auth.utils import split_idNumber
 from emc.auth.utils import login
-from emc.auth.utils import logout
+from emc.auth.utils import timeout
 import binascii
 import time
 import logging
@@ -244,7 +244,6 @@ class SessionPlugin(BasePlugin):
         """ Extract basic auth credentials from 'request'. """
         
         creds = {}
-
         if self.jid_auth_header in request.keys():
                 dn = request.get(self.jid_auth_header, '')
                 if not bool(dn):return creds
@@ -282,33 +281,8 @@ class SessionPlugin(BasePlugin):
                     creds["source"] = "emc.session"
                     return creds
 
-        else:
-
-            if self.cookie_name in request.keys():
-
-                try:
-                    creds["cookie"] = binascii.a2b_base64(
-                            request.get(self.cookie_name)
-                            )
-                except binascii.Error:
-            # If we have a cookie which is not properly base64 encoded it
-            # can not be ours.
-                    return creds
-                else:
-                    ticket = creds["cookie"]                               
-                    ticket_data = self._validateTicket(ticket)
-                    if ticket_data is not None:
-                        (digest, userid, tokens, user_data, timestamp) = ticket_data
-                        creds["login"] = userid
-                        creds[ 'password' ] = userid
-                        creds['init_login'] = False
-                        creds["source"] = "emc.session" 
-                        return creds
-                    else:
-                        return creds
-                        
-            else:
-                return creds                                
+        return creds
+                                
 
     # IAuthenticationPlugin implementation
     def authenticateCredentials(self, credentials):
@@ -328,8 +302,7 @@ class SessionPlugin(BasePlugin):
         url = "%s/index.html" % api.portal.get().absolute_url()       
         if credentials['url'] == url:
             # fire login event
-            login(pas,userid,credentials['clientip'])
-        
+            login(pas,userid,credentials['clientip'])        
         return (info['id'], info['login'])
 
     def _validateTicket(self, ticket, now=None):
@@ -450,6 +423,8 @@ class SessionPlugin(BasePlugin):
 
     def _refreshSession(self, request, now=None):
         # Refresh a ticket. Does *not* check the user is in the use folder
+#         import pdb
+#         pdb.set_trace()
         if self.cookie_name not in request:
             return None
         try:
@@ -461,18 +436,18 @@ class SessionPlugin(BasePlugin):
         ticket_data = self._validateTicket(ticket, now)
         if ticket_data is None:
         #fire a logout event and call resetCredentials
-            logging.info("session timeout")
+#             logging.info("session timeout")
 
             try:
-                logout(request)
-                self.resetCredentials(request, request['RESPONSE'])
+                timeout(request)
+#                 self.resetCredentials(request, request['RESPONSE'])
             except:
                 pass                                              
             return None
         (digest, userid, tokens, user_data, timestamp) = ticket_data
 
         self._setupSession(userid, request.response, tokens, user_data)
-        logging.info('update session')
+#         logging.info('update session')
         return True
 
     def _refresh_content(self, REQUEST):

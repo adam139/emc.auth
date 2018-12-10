@@ -36,16 +36,17 @@ def login(pas,userid,ip):
                 event.notify(loginEvent)
 
 
-def logout(REQUEST):
+def timeout(REQUEST):
     """Publicly accessible method to log out a user
     """
     user = getSecurityManager().getUser()
-
+    if user is None:
+        return
     logoutEvent = NormalUserlogoutEvent(userid = getfullname_orid(user),
                                      datetime = datetime.datetime.now().strftime(fmt),
                                      ip = get_ip(),
                                      type = 0,
-                                     description = "",
+                                     description = "session超时",
                                      result = 1)
 
     if logoutEvent.available():
@@ -57,7 +58,7 @@ def logout(REQUEST):
                                      datetime = datetime.datetime.now().strftime(fmt),
                                      ip = get_ip(),
                                      type = 0,
-                                     description = "",
+                                     description = "session超时",
                                      result = 1)
             event.notify(logoutEvent)            
 
