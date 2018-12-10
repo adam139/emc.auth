@@ -18,6 +18,7 @@ from plone.session.plugins.session import SessionPlugin as BasePlugin
 from zope.component import getUtility
 from zope.component import queryUtility
 from zope.interface import implementer
+from plone import api
 from emc.policy import get_ip
 from emc.auth.utils import transfer_codec
 from emc.auth.utils import split_idNumber
@@ -70,13 +71,13 @@ class SessionPlugin(BasePlugin):
     meta_type = "Emc Session Plugin"
     security = ClassSecurityInfo()
 
-    cookie_name = "__emc_ac"
+    cookie_name = "__ac"
     jid_auth_header = "HTTP_DNNAME"
     cookie_lifetime = 0
     cookie_domain = ''
     mod_auth_tkt = False
-    timeout = 0.2 * 60 * 60  # 2h - same as default in mod_auth_tkt
-    refresh_interval = 0.1 * 60 * 60  # -1 to disable
+    timeout = 600  # 2h - same as default in mod_auth_tkt
+    refresh_interval = 180  # -1 to disable
     external_ticket_name = 'ticket'
     secure = False
     _shared_secret = None
@@ -282,6 +283,7 @@ class SessionPlugin(BasePlugin):
                     return creds
 
         else:
+
             if self.cookie_name in request.keys():
 
                 try:
@@ -296,27 +298,21 @@ class SessionPlugin(BasePlugin):
                     ticket = creds["cookie"]                               
                     ticket_data = self._validateTicket(ticket)
                     if ticket_data is not None:
-#                         (digest, userid, tokens, user_data, timestamp) = ticket_data
-                        #fire a logout event and call resetCredentials
-                        logging.info("logout")
-                        url = "%s/index.html" % api.portal.get().absolute_url()
-                        import pdb
-                        pdb.set_trace()
-                        if url == request['URL']:
-                            logout(request)
-                            self.resetCredentials(request, request['RESPONSE']) 
+                        (digest, userid, tokens, user_data, timestamp) = ticket_data
+                        creds["login"] = userid
+                        creds[ 'password' ] = userid
+                        creds['init_login'] = False
+                        creds["source"] = "emc.session" 
                         return creds
                     else:
                         return creds
                         
             else:
-                return creds                      
-            
-
+                return creds                                
 
     # IAuthenticationPlugin implementation
     def authenticateCredentials(self, credentials):
-        from plone import api
+
         if not credentials.get("source", None) == "emc.session":
             return None
         userid = credentials['login']
@@ -328,6 +324,7 @@ class SessionPlugin(BasePlugin):
         info = pas._verifyUser(pas.plugins, user_id=userid)
         if info is None:
             return None
+#         self._setupSession(userid, request.response)
         url = "%s/index.html" % api.portal.get().absolute_url()       
         if credentials['url'] == url:
             # fire login event
@@ -368,9 +365,7 @@ class SessionPlugin(BasePlugin):
 
     # ICredentialsUpdatePlugin implementation
     def updateCredentials(self, request, response, login, new_password):
-#         import pdb
-#         pdb.set_trace()
-        if len(login) != 18:return
+
         pas = self._getPAS()
 
         info = pas._verifyUser(pas.plugins, login=login)
@@ -464,10 +459,20 @@ class SessionPlugin(BasePlugin):
         if now is None:
             now = time.time()
         ticket_data = self._validateTicket(ticket, now)
-        if ticket_data is None:          
+        if ticket_data is None:
+        #fire a logout event and call resetCredentials
+            logging.info("session timeout")
+
+            try:
+                logout(request)
+                self.resetCredentials(request, request['RESPONSE'])
+            except:
+                pass                                              
             return None
         (digest, userid, tokens, user_data, timestamp) = ticket_data
+
         self._setupSession(userid, request.response, tokens, user_data)
+        logging.info('update session')
         return True
 
     def _refresh_content(self, REQUEST):
