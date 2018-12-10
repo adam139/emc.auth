@@ -244,81 +244,29 @@ class SessionPlugin(BasePlugin):
         """ Extract basic auth credentials from 'request'. """
         
         creds = {}
-
         if self.jid_auth_header in request.keys():
                 dn = request.get(self.jid_auth_header, '')
                 if not bool(dn):return creds
                 # fetch remote ip
-                creds['clientip'] = get_ip(request)
-            # Looking into the cookie first...
-                if self.cookie_name in request.keys():
-                    try:
-                        creds["cookie"] = binascii.a2b_base64(
-                            request.get(self.cookie_name)
-                            )
-                    except binascii.Error:
-            # If we have a cookie which is not properly base64 encoded it
-            # can not be ours.
-                        return creds
-                    else:
-                        ticket = creds["cookie"]                               
-                        ticket_data = self._validateTicket(ticket)
-                        if ticket_data is not None:
-                            (digest, userid, tokens, user_data, timestamp) = ticket_data
-                            creds["login"] = userid
-                            creds[ 'password' ] = userid
-                            creds['init_login'] = False
-                            creds["source"] = "emc.session" 
-                            return creds                                                                          
-                                
+                creds['clientip'] = get_ip(request)                                
                 login_pw = self.extractAuthGWInfo(dn) 
                 if login_pw is not None:
                     id, name, idnumber = login_pw
                     creds[ 'login' ] = id
                     creds[ 'password' ] = idnumber    
                     creds["cookie"] = ""
-                    creds['init_login'] = True
                     creds["url"] = request['URL']
                     creds["source"] = "emc.session"
                     return creds
-
-        else:
-
-            if self.cookie_name in request.keys():
-
-                try:
-                    creds["cookie"] = binascii.a2b_base64(
-                            request.get(self.cookie_name)
-                            )
-                except binascii.Error:
-            # If we have a cookie which is not properly base64 encoded it
-            # can not be ours.
-                    return creds
-                else:
-                    ticket = creds["cookie"]                               
-                    ticket_data = self._validateTicket(ticket)
-                    if ticket_data is not None:
-                        (digest, userid, tokens, user_data, timestamp) = ticket_data
-                        creds["login"] = userid
-                        creds[ 'password' ] = userid
-                        creds['init_login'] = False
-                        creds["source"] = "emc.session" 
-                        return creds
-                    else:
-                        return creds
                         
-            else:
-                return creds                                
+        return creds                                                
 
     # IAuthenticationPlugin implementation
     def authenticateCredentials(self, credentials):
 
         if not credentials.get("source", None) == "emc.session":
             return None
-        userid = credentials['login']
-        if not credentials["init_login"]:                  
-            # XXX Should refresh the ticket if after timeout refresh.
-            return (userid,userid)            
+        userid = credentials['login']            
         pas = self._getPAS()
         #user_id -> info_dict or None
         info = pas._verifyUser(pas.plugins, user_id=userid)
@@ -328,8 +276,7 @@ class SessionPlugin(BasePlugin):
         url = "%s/index.html" % api.portal.get().absolute_url()       
         if credentials['url'] == url:
             # fire login event
-            login(pas,userid,credentials['clientip'])
-        
+            login(pas,userid,credentials['clientip'])        
         return (info['id'], info['login'])
 
     def _validateTicket(self, ticket, now=None):
