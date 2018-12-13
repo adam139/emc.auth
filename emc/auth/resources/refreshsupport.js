@@ -49,7 +49,6 @@ function startSessionRefresh(index) {
 
 $(document).ready(function () {
     $('body').bind('mouseover click keydown', sessionActivity);
-    $('#personaltools-logout').bind('click', logout);
     $("head link[rel='stylesheet'][href*='?session_refresh=true']").each(startSessionRefresh);
 });
 

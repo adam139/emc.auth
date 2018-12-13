@@ -71,7 +71,7 @@ class SessionPlugin(BasePlugin):
     meta_type = "Emc Session Plugin"
     security = ClassSecurityInfo()
 
-    cookie_name = "__ac"
+    cookie_name = "__emc_ac"
     jid_auth_header = "HTTP_DNNAME"
     cookie_lifetime = 0
     cookie_domain = ''
