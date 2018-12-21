@@ -76,8 +76,8 @@ class SessionPlugin(BasePlugin):
     cookie_lifetime = 0
     cookie_domain = ''
     mod_auth_tkt = False
-    timeout = 600  # 2h - same as default in mod_auth_tkt
-    refresh_interval = 180  # -1 to disable
+    timeout = 800  # 2h - same as default in mod_auth_tkt
+    refresh_interval = 400  # -1 to disable
     external_ticket_name = 'ticket'
     secure = False
     _shared_secret = None
