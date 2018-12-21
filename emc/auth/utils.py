@@ -16,6 +16,7 @@ def login(pas,userid,ip):
         user=pas.getUserById(userid)
         if user is None:
             return
+        
         loginEvent = NormalUserloginEvent(userid = getfullname_orid(user),
                                      datetime = datetime.datetime.now().strftime(fmt),
                                      ip = ip,
@@ -27,9 +28,9 @@ def login(pas,userid,ip):
                 event.notify(loginEvent)
             else:
                 loginEvent = AddloginEvent(adminid = getfullname_orid(user),
-                                     userid = " ",
+                                     userid = "",
                                      datetime = datetime.datetime.now().strftime(fmt),
-                                     ip = get_ip(),
+                                     ip = ip,
                                      type = 0,
                                      description = "",
                                      result = 1)                
