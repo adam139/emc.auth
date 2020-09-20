@@ -10,8 +10,8 @@ from emc.policy.patch.user import isRole
 ####################################
 # monkey patch pas, the evil happens
 
-pas.patch_pas = patch_pas
-UserManager.isRole = isRole
+# pas.patch_pas = patch_pas
+# UserManager.isRole = isRole
 
 
 #################################
