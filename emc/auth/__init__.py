@@ -1,10 +1,10 @@
 # -*- extra stuff goes here -*-
 #-*- coding: UTF-8 -*-
 
-from Products.PlonePAS.plugins.user import UserManager
-from Products.PlonePAS import pas
-from emc.policy.patch.pas import patch_pas
-from emc.policy.patch.user import isRole
+# from Products.PlonePAS.plugins.user import UserManager
+# from Products.PlonePAS import pas
+# from emc.policy.patch.pas import patch_pas
+# from emc.policy.patch.user import isRole
 
 
 ####################################
